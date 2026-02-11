@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
 import shutil
@@ -13,16 +14,25 @@ from app.processor import processar_xmls
 app = FastAPI(
     title="Conversor XML para CSV",
     description="""
-API para processamento de arquivos **.RAR** contendo múltiplos XMLs de Nota Fiscal (NFe).
+    API para processamento de arquivos **.RAR** contendo múltiplos XMLs de Nota Fiscal (NFe).
 
-### Fluxo:
-1. Envie um arquivo **.rar**
-2. A API extrai os XMLs
-3. Processa dados fiscais e tributários
-4. Gera um arquivo CSV consolidado
-5. Retorna o CSV para download
-""",
+    ### Fluxo:
+    1. Envie um arquivo **.rar**
+    2. A API extrai os XMLs
+    3. Processa dados fiscais e tributários
+    4. Gera um arquivo CSV consolidado
+    5. Retorna o CSV para download
+    """,
     version="1.0.0"
+)
+
+# Configuração do CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todas as origens
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos HTTP
+    allow_headers=["*"],  # Permite todos os cabeçalhos
 )
 
 BASE_DIR = Path(__file__).resolve().parent
