@@ -190,5 +190,27 @@ def processar_xmls(pasta_xml: Path) -> pd.DataFrame:
         df['dta_dhemi'] = df['dta_dhemi'].apply(
             lambda x: x.strftime('%d/%m/%Y') if isinstance(x, datetime.datetime) and not pd.isna(x) else ''
         )
+    
+    # cria ICMS o/cst se as colunas existirem
+    if {'ICMS orig', 'ICMS CST'}.issubset(df.columns):
 
+        df['ICMS orig'] = trata_codigo_fiscal(df['ICMS orig'], 1)
+        df['ICMS CST']  = trata_codigo_fiscal(df['ICMS CST'], 2)
+
+        # força texto no Excel
+        df['ICMS o/cst'] = "'" + df['ICMS orig'] + df['ICMS CST']
+
+        # remove colunas auxiliares
+        df.drop(columns=['ICMS orig', 'ICMS CST'], inplace=True)
+    
+    col_ref = 'vUnTrib'
+    nova_col = 'ICMS o/cst'
+
+    cols = list(df.columns)
+
+    if col_ref in cols and nova_col in cols:
+        idx = cols.index(col_ref) + 1
+        cols.insert(idx, cols.pop(cols.index(nova_col)))
+        df = df[cols]
+        
     return df
