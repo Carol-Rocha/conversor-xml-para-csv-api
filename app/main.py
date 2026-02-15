@@ -7,7 +7,7 @@ import uuid
 import os
 import rarfile
 
-rarfile.UNRAR_TOOL = "unar"
+rarfile.UNRAR_TOOL = "unrar-free"
 
 from app.processor import processar_xmls
 
@@ -70,6 +70,8 @@ async def processar_arquivo(file: UploadFile = File(...)):
     csv_saida = OUTPUT_DIR / f"resultado_{request_id}.csv"
 
     # Salva o arquivo enviado
+    file.file.seek(0)
+
     with open(rar_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -82,10 +84,16 @@ async def processar_arquivo(file: UploadFile = File(...)):
         # Salva o DataFrame em CSV
         df.to_csv(csv_saida, index=False)
 
-    except rarfile.Error:
+    # except rarfile.Error:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Erro ao extrair o arquivo RAR. Verifique se o arquivo é válido."
+    #     )
+    except rarfile.Error as e:
+        print("ERRO RARFILE:", e)
         raise HTTPException(
             status_code=400,
-            detail="Erro ao extrair o arquivo RAR. Verifique se o arquivo é válido."
+            detail=f"Erro RAR real: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
