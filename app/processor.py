@@ -184,12 +184,15 @@ def processar_xmls(pasta_xml: Path) -> pd.DataFrame:
 
     if 'dta_dhemi' in df.columns:
         df['dta_dhemi'] = pd.to_datetime(
-            df['dta_dhemi'], errors='coerce'
+            df['dta_dhemi'],
+            errors='coerce',
+            utc=True
         )
-        import datetime
-        df['dta_dhemi'] = df['dta_dhemi'].apply(
-            lambda x: x.strftime('%d/%m/%Y') if isinstance(x, datetime.datetime) and not pd.isna(x) else ''
-        )
+
+        df['dta_dhemi'] = df['dta_dhemi'].dt.tz_convert(None)
+
+        df['dta_dhemi'] = df['dta_dhemi'].dt.strftime('%d/%m/%Y')
+        df['dta_dhemi'] = df['dta_dhemi'].fillna('')
     
     # cria ICMS o/cst se as colunas existirem
     if {'ICMS orig', 'ICMS CST'}.issubset(df.columns):
