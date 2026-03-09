@@ -5,19 +5,17 @@ from pathlib import Path
 import shutil
 import uuid
 import os
-import rarfile
-
-rarfile.UNRAR_TOOL = "unrar-free"
+import zipfile
 
 from app.processor import processar_xmls
 
 app = FastAPI(
     title="Conversor XML para CSV",
     description="""
-    API para processamento de arquivos **.RAR** contendo múltiplos XMLs de Nota Fiscal (NFe).
+    API para processamento de arquivos **.zip** contendo múltiplos XMLs de Nota Fiscal (NFe).
 
     ### Fluxo:
-    1. Envie um arquivo **.rar**
+    1. Envie um arquivo **.zip**
     2. A API extrai os XMLs
     3. Processa dados fiscais e tributários
     4. Gera um arquivo CSV consolidado
@@ -45,56 +43,45 @@ for d in [UPLOAD_DIR, XML_DIR, OUTPUT_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 
-def extrair_rar(caminho_rar: Path, destino: Path):
+def extrair_zip(caminho_zip: Path, destino: Path):
     destino.mkdir(parents=True, exist_ok=True)
-    with rarfile.RarFile(caminho_rar) as rf:
-        rf.extractall(destino)
+    with zipfile.ZipFile(caminho_zip, 'r') as zf:
+        zf.extractall(destino)
 
 
 @app.post(
     "/processar",
-    summary="Processar arquivo RAR com XMLs",
-    description="Recebe um arquivo **.rar** contendo XMLs de NFe e retorna um CSV processado."
+    summary="Processar arquivo ZIP com XMLs",
+    description="Recebe um arquivo **.zip** contendo XMLs de NFe e retorna um CSV processado."
 )
 async def processar_arquivo(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".rar"):
+    if not file.filename.lower().endswith(".zip"):
         raise HTTPException(
             status_code=400,
-            detail="Envie um arquivo .rar contendo XMLs de NFe"
+            detail="Envie um arquivo .zip contendo XMLs de NFe"
         )
 
     request_id = uuid.uuid4().hex
 
-    rar_path = UPLOAD_DIR / f"{request_id}.rar"
+    zip_path = UPLOAD_DIR / f"{request_id}.zip"
     pasta_xml = XML_DIR / request_id
     csv_saida = OUTPUT_DIR / f"resultado_{request_id}.csv"
 
     # Salva o arquivo enviado
     file.file.seek(0)
 
-    with open(rar_path, "wb") as buffer:
+    with open(zip_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        # Extrai o RAR
-        extrair_rar(rar_path, pasta_xml)
+        # Extrai o ZIP
+        extrair_zip(zip_path, pasta_xml)
 
         # Processa os XMLs e gera o DataFrame
         df = processar_xmls(pasta_xml)
         # Salva o DataFrame em CSV
         df.to_csv(csv_saida, index=False)
 
-    # except rarfile.Error:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Erro ao extrair o arquivo RAR. Verifique se o arquivo é válido."
-    #     )
-    except rarfile.Error as e:
-        print("ERRO RARFILE:", e)
-        raise HTTPException(
-            status_code=400,
-            detail=f"Erro RAR real: {str(e)}"
-        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
